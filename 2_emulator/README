@@ -1,0 +1,31 @@
+KAIST CS311 2015 Fall                       
+
+Made by TAs of CS311
+
+Project Lab2 - MIPS Emulator
+
+[File Description]
+cs311.c ----------- This contains main function.
+                    It uploads instruction and data into memory regions, and parse and execute them by using functions which will be implemented by you.
+
+util.c & util.h --- This contains all the data structures.
+                    This also contains several useful functions. (Read and write data into the memory region, initialize the memory region and etc...)
+
+parse.c & parse.h - This contains variables and functions to parse the instruction and data.
+                    You should implement them.
+
+run.c & run.h ----- This contains variables and functions to execute instructions.
+                    You should implement them.
+
+sample_input ------ This directory contains serveral sample input files.
+                    Please use these files for your program testing.
+
+[Compile & Execution]
+Just type "make" to compile your code.
+You can execute your program using this command: ./cs311em [-m addr1:addr2] [-d] [-n num_instr] inputBinary
+	* -m : Dump the memory content form addr1 to addr2
+	* -d : Print the register file content for each instruction execution. Print memory content too if -m option is enabled.
+	* -n : Number of instructions to execute. Default value is 100.
+
+In each file, we write some comments to help you to understand the code, so please read them carefully. :D
+If you have any question, please email us. (cs311_ta@calab.kaist.ac.kr)
