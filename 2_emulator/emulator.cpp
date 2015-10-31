@@ -101,28 +101,28 @@ class Jtype : public Instruction {
     };
 
 Instruction parse_inst(string raw_str) {
-    int op = atoi(raw_str.substr(6));
+    int op = stoi(raw_str.substr(6), nullptr, 2);
     Instruction inst;
 
     switch (opcode):
         case Rtype:
-            int rs = atoi(raw_str.substr(6, 5));
-            int rt = atoi(raw_str.substr(11, 5));
-            int rd = atoi(raw_str.substr(16, 5));
-            int sft = atoi(raw_str.substr(21, 5));
-            int fn = atoi(raw_str.substr(26, 6));
+            int rs = stoi(raw_str.substr(6, 5), nullptr, 2);
+            int rt = stoi(raw_str.substr(11, 5), nullptr, 2);
+            int rd = stoi(raw_str.substr(16, 5), nullptr, 2);
+            int sft = stoi(raw_str.substr(21, 5), nullptr, 2);
+            int fn = stoi(raw_str.substr(26, 6), nullptr, 2);
 
             inst = Rtype(op, rs, rt, rd, sft, fn);
 
         case Itype:
-            int rs = atoi(raw_str.substr(6, 5));
-            int rt = atoi(raw_str.substr(11, 5));
-            int imm = atoi(raw_str.substr(16, 16));
+            int rs = stoi(raw_str.substr(6, 5), nullptr, 2);
+            int rt = stoi(raw_str.substr(11, 5), nullptr, 2);
+            int imm = stoi(raw_str.substr(16, 16), nullptr, 2);
 
             inst = Itype(op, rs, rt, imm);
 
         case Jtype:
-            int target = atoi(raw_str.substr(6, 26));
+            int target = stoi(raw_str.substr(6, 26), nullptr, 2);
 
             inst = Jtype(op, target);
 
@@ -131,18 +131,20 @@ Instruction parse_inst(string raw_str) {
 
 int main(int argc, char* argv[]) {
     string filename = (string) argv[1];
+    ifstream inFile(filename);
+
     char input_string[MAX_SIZE];
 
     int data_section_size, text_section_size;
-
     int target_address;
-    ifstream inFile(filename);
+
+    Instruction inst;
+    int data;
 
     // Initialize Register
     for (int i = 0; i < 32 ; i++) {
       regmap[i] = 0;
     }
-
 
     // Get each section's size info
     inFile.getline(input_string, MAX_SIZE);
@@ -153,11 +155,18 @@ int main(int argc, char* argv[]) {
 
     // text section load
     for (i = 0; i < text_section_size ; i+=4) {
+        inFile.getline(input_string, MAX_SIZE);
+        inst = parse_inst((string) input_string);
 
+        textmap[TEXT_START + i] = inst;
     }
 
     // data section load
     for (i = 0; i < data_section_size ; i+=4) {
+        inFile.getline(input_string, MAX_SIZE);
+        data = a
+
+        datamap[DATA_START + i] = data;
 
     }
 
