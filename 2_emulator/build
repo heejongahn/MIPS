@@ -1,0 +1,2 @@
+g++ emulator.cpp -o emulator -std=c++11
+./emulator s.o
