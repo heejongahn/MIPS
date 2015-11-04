@@ -25,7 +25,16 @@ unordered_map <int, int> datamap;
 
 int pc = TEXT_START;
 
-char* getCmdOption(char ** begin, char ** end, const std::string & option)
+int sign_extend(int original) {
+    int value = (0x0000FFFF & original);
+    int mask = 0x00008000;
+    int sign = (mask & original) >> 15;
+    if (sign == 1)
+        value += 0xFFFF0000;
+    return value;
+}
+
+char* get_cmd_option(char ** begin, char ** end, const std::string & option)
 {
     char ** itr = std::find(begin, end, option);
     if (itr != end && ++itr != end)
@@ -35,7 +44,7 @@ char* getCmdOption(char ** begin, char ** end, const std::string & option)
     return 0;
 }
 
-bool cmdOptionExists(char** begin, char** end, const std::string& option)
+bool cmd_option_exists(char** begin, char** end, const std::string& option)
 {
     return std::find(begin, end, option) != end;
 }
@@ -102,7 +111,44 @@ vector<int> parse_inst(string raw_str) {
   return result;
 }
 
-void print_result() {
+void mdump(int start, int stop) {
+  int address;
+  vector<int> inst;
+  int result = 0;
+
+  cout << setfill('0') << setbase(16);
+  cout << "Memory content [0x" << setw(8) << start << "..0x" << setw(8) << stop << "] :" << endl;
+  cout << "-------------------------------------" << endl;
+  for (address = start; address <= stop; address += 4)  {
+    cout << "0x" << setw(8) << address << ": 0x";
+    if (datamap.find(address) != datamap.end())  {
+      cout << setw(8) << datamap[address] << endl;
+    }
+    else if (textmap.find(address) != textmap.end())  {
+      inst = textmap[address];
+      switch (inst[0])  {
+        case 0:
+          result = ((inst[0] << 26) | (inst[1] << 21) | (inst[2] << 16) |
+              (inst[3] << 11) | (inst[4] << 6) | inst[5]);
+          break;
+        case 2:
+        case 3:
+          result = ((inst[0] << 26) | inst[1]);
+          break;
+        default:
+          result = ((inst[0] << 26) | (inst[1] << 21) | (inst[2] << 16) | inst[3]);
+          break;
+      }
+      cout << setw(8) << result << endl;
+    }
+    else  {
+      cout << setw(8) << 0 << endl;
+    }
+  }
+  cout << endl;
+}
+
+void print_result(bool if_mdump, int start, int end) {
   int i;
 
   cout << "Current register values :" << endl;
@@ -114,17 +160,11 @@ void print_result() {
     cout << setw(8) << setbase(16) << reg[i] << endl;
   }
   cout << endl;
-}
 
-int sign_extend(int original) {
-    int value = (0x0000FFFF & original);
-    int mask = 0x00008000;
-    int sign = (mask & original) >> 15;
-    if (sign == 1)
-        value += 0xFFFF0000;
-    return value;
+  if (if_mdump) {
+    mdump(start, end);
+  }
 }
-
 
 int main(int argc, char* argv[]) {
   string filename = (string) argv[argc-1];
@@ -144,24 +184,22 @@ int main(int argc, char* argv[]) {
 
   // Command-line option
   int num_instr = 100;
-  if (cmdOptionExists(argv, argv+argc, "-n")) {
-    num_instr = atoi(getCmdOption(argv, argv+argc, "-n"));
+  if (cmd_option_exists(argv, argv+argc, "-n")) {
+    num_instr = atoi(get_cmd_option(argv, argv+argc, "-n"));
   }
-  bool print_every = cmdOptionExists(argv, argv+argc, "-d");
+  bool print_every = cmd_option_exists(argv, argv+argc, "-d");
   bool mem_violation = false;
+  bool if_mdump = cmd_option_exists(argv, argv+argc, "-m");
   int violation_value;
+  int mem_start = 0, mem_end = 0;
 
-  /*
   char* mdump_region;
-  if (cmdOptionExists(argv, argv+argc, "-m")) {
-    mdump_region = getCmdOption(argv, argv+argc, "-m");
+  if (if_mdump) {
+    mdump_region = get_cmd_option(argv, argv+argc, "-m");
+    mem_start = htoi(strtok(mdump_region, ":"));
+    mem_end = htoi(strtok(NULL, " "));
   }
 
-  int mem_start = htoi(strtok(mdump_region, ":"));
-  int mem_end = htoi(strtok(NULL, " "));
-  */
-
-  // cout << "-m: " << mdump_region << endl;
 
   inFile.getline(buf, MAX_SIZE);
   input_str = (string) buf;
@@ -195,9 +233,7 @@ int main(int argc, char* argv[]) {
 
   }
   // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
-
   // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
-  // write result to stdout
 
   cout << "Simulating for " << num_instr << " cycles..." << endl;
   cout << endl;
@@ -361,12 +397,12 @@ int main(int argc, char* argv[]) {
       }
       else if (pc == TEXT_START + text_section_size) {
         cout << "Run bit unset pc: " << setbase(16) << pc << endl;
-        print_result();
+        print_result(if_mdump, mem_start, mem_end);
         cout << "Simulator halted" << endl;
         cout << endl;
       }
       else  {
-        print_result();
+        print_result(if_mdump, mem_start, mem_end);
       }
     }
     count++;
@@ -385,7 +421,7 @@ int main(int argc, char* argv[]) {
         cout << endl;
       }
 
-      print_result();
+      print_result(if_mdump, mem_start, mem_end);
     }
   }
 
