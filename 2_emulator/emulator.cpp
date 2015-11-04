@@ -111,6 +111,15 @@ vector<int> parse_inst(string raw_str) {
   return result;
 }
 
+void m_violate(int violation_type, int violation_value)  {
+  if (violation_type) {
+  cout << "Memory Write Error: Exceed memory boundary 0x" << setbase(16) << violation_value << endl;
+  }
+  else {
+  cout << "Memory Read Error: Exceed memory boundary 0x" << setbase(16) << violation_value << endl;
+  }
+}
+
 void mdump(int start, int stop) {
   int address;
   vector<int> inst;
@@ -119,6 +128,10 @@ void mdump(int start, int stop) {
   cout << setfill('0') << setbase(16);
   cout << "Memory content [0x" << setw(8) << start << "..0x" << setw(8) << stop << "] :" << endl;
   cout << "-------------------------------------" << endl;
+  if (start < 0x400000) {
+    m_violate(0, start);
+    return;
+  }
   for (address = start; address <= stop; address += 4)  {
     cout << "0x" << setw(8) << address << ": 0x";
     if (datamap.find(address) != datamap.end())  {
@@ -179,7 +192,7 @@ int main(int argc, char* argv[]) {
   int data;
 
   int i;
-  int op, rs, rt, rd, sft, fn, imm, target;
+  int op, rs, rt, rd, sft, fn, imm, target, target_address;
   int count = 0;
 
   // Command-line option
@@ -190,7 +203,7 @@ int main(int argc, char* argv[]) {
   bool print_every = cmd_option_exists(argv, argv+argc, "-d");
   bool mem_violation = false;
   bool if_mdump = cmd_option_exists(argv, argv+argc, "-m");
-  int violation_value;
+  int violation_value, violation_type;
   int mem_start = 0, mem_end = 0;
 
   char* mdump_region;
@@ -360,20 +373,26 @@ int main(int argc, char* argv[]) {
       // lw
       case 0x23:
         rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
-        reg[rt] = datamap[reg[rs] + imm];
-        if (imm < 0x10000000) {
+        target_address = reg[rs] + imm;
+
+        reg[rt] = datamap[target_address];
+        if (target_address < 0x10000000) {
           mem_violation = true;
-          violation_value = imm;
+          violation_value = target_address;
+          violation_type = 0;
         }
         break;
 
       // sw
       case 0x2b:
         rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
-        datamap[reg[rs] + imm] = reg[rt];
-        if (imm < 0x10000000) {
+        target_address = reg[rs] + imm;
+
+        datamap[target_address] = reg[rt];
+        if (target_address < 0x10000000) {
           mem_violation = true;
-          violation_value = imm;
+          violation_value = target_address;
+          violation_type = 1;
         }
         break;
 
@@ -392,7 +411,7 @@ int main(int argc, char* argv[]) {
     }
     if (print_every)  {
       if (mem_violation)  {
-        cout << "Memory Write Error: Exceed memory boundary 0x" << setbase(16) << violation_value << endl;
+        m_violate(violation_type, violation_value);
         break;
       }
       else if (pc == TEXT_START + text_section_size) {
@@ -410,7 +429,7 @@ int main(int argc, char* argv[]) {
 
   if (!print_every) {
     if (mem_violation)  {
-      cout << "Memory Write Error: Exceed memory boundary 0x" << setbase(16) << violation_value << endl;
+      m_violate(violation_type, violation_value);
     }
 
     else  {
