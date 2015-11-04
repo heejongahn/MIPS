@@ -138,6 +138,7 @@ int main(int argc, char* argv[]) {
 
   while (pc < TEXT_START + text_section_size) {
     inst = textmap[pc];
+    pc += 4;
     op = inst[0];
 
     switch(op)  {
@@ -240,8 +241,6 @@ int main(int argc, char* argv[]) {
         target = inst[1];
         break;
     }
-
-    pc += 4;
   }
 
   // completion
