@@ -15,21 +15,6 @@
 // namespace declare
 using namespace std;
 
-// class definition
-// opcode map
-unordered_map <string, int> opmap = {{"addu", 0}, {"and", 0}, {"nor", 0}, {"or", 0},
-  {"sltu", 0}, {"sll", 0}, {"srl", 0}, {"subu", 0}, {"jr", 0}, {"addiu", 9},
-  {"andi", 12}, {"lui", 15}, {"ori", 13}, {"sltiu", 11}, {"beq", 4}, {"bne", 5},
-  {"lw", 35}, {"sw", 43}, {"j", 2}, {"jal", 3}, {"la", 99}};
-
-// fn map
-unordered_map <string, int> fnmap = {{"addu", 0x21}, {"and", 0x24}, {"nor", 0x27},
-  {"or", 0x25}, {"sltu", 0x2b}, {"sll", 0}, {"srl", 2}, {"subu", 0x23},
-  {"jr", 8}};
-
-// opcoe -> instruction type (0: Rtype, 1: Itype, 2: Jtype)
-unordered_map <int, int> typemap;
-
 // reg value array
 int reg[32];
 
@@ -47,43 +32,43 @@ vector<int> parse_inst(string raw_str) {
   result.push_back(op);
 
   switch (op) {
-      case 0:
-          rs = stoi(raw_str.substr(6, 5), nullptr, 2);
-          rt = stoi(raw_str.substr(11, 5), nullptr, 2);
-          rd = stoi(raw_str.substr(16, 5), nullptr, 2);
-          sft = stoi(raw_str.substr(21, 5), nullptr, 2);
-          fn = stoi(raw_str.substr(26, 6), nullptr, 2);
+    case 0:
+      rs = stoi(raw_str.substr(6, 5), nullptr, 2);
+      rt = stoi(raw_str.substr(11, 5), nullptr, 2);
+      rd = stoi(raw_str.substr(16, 5), nullptr, 2);
+      sft = stoi(raw_str.substr(21, 5), nullptr, 2);
+      fn = stoi(raw_str.substr(26, 6), nullptr, 2);
 
-          result.push_back(rs);
-          result.push_back(rt);
-          result.push_back(rd);
-          result.push_back(sft);
-          result.push_back(fn);
-          break;
+      result.push_back(rs);
+      result.push_back(rt);
+      result.push_back(rd);
+      result.push_back(sft);
+      result.push_back(fn);
+      break;
 
-      case 9:
-      case 0xc:
-      case 0xf:
-      case 0xd:
-      case 0xb:
-      case 4:
-      case 5:
-      case 0x23:
-      case 0x2b:
-          rs = stoi(raw_str.substr(6, 5), nullptr, 2);
-          rt = stoi(raw_str.substr(11, 5), nullptr, 2);
-          imm = stoi(raw_str.substr(16, 16), nullptr, 2);
+    case 9:
+    case 0xc:
+    case 0xf:
+    case 0xd:
+    case 0xb:
+    case 4:
+    case 5:
+    case 0x23:
+    case 0x2b:
+      rs = stoi(raw_str.substr(6, 5), nullptr, 2);
+      rt = stoi(raw_str.substr(11, 5), nullptr, 2);
+      imm = stoi(raw_str.substr(16, 16), nullptr, 2);
 
-          result.push_back(rs);
-          result.push_back(rt);
-          result.push_back(imm);
-          break;
+      result.push_back(rs);
+      result.push_back(rt);
+      result.push_back(imm);
+      break;
 
-      case 2:
-      case 3:
-          target = stoi(raw_str.substr(6, 26), nullptr, 2);
+    case 2:
+    case 3:
+      target = stoi(raw_str.substr(6, 26), nullptr, 2);
 
-          result.push_back(target);
+      result.push_back(target);
   }
 
   return result;
@@ -95,8 +80,8 @@ void print_result() {
   cout << "PC: 0x" << setfill('0') << setw(8) << setbase(16) << pc << endl;
   cout << "Registers:" << endl;
   for (i = 0; i < 32; i++)  {
-    cout << setbase(10) << "R" << i << ": 0x";
-    cout << setw(8) << setbase(16) << reg[i] << endl;
+  cout << setbase(10) << "R" << i << ": 0x";
+  cout << setw(8) << setbase(16) << reg[i] << endl;
   }
 }
 
@@ -120,7 +105,7 @@ int main(int argc, char* argv[]) {
 
   // Initialize Register
   for (i = 0; i < 32 ; i++) {
-    reg[i] = 0;
+  reg[i] = 0;
   }
 
   // Get each section's size info
@@ -132,18 +117,18 @@ int main(int argc, char* argv[]) {
 
   // text section load
   for (i = 0; i < text_section_size ; i+=4) {
-      inst = parse_inst(input_str.substr(0, 32));
-      input_str = input_str.substr(32);
+    inst = parse_inst(input_str.substr(0, 32));
+    input_str = input_str.substr(32);
 
-      textmap[TEXT_START + i] = inst;
+    textmap[TEXT_START + i] = inst;
   }
 
   // data section load
   for (i = 0; i < data_section_size ; i+=4) {
-      data = stoi(input_str.substr(0, 32), nullptr, 2);
-      input_str = input_str.substr(32);
+    data = stoi(input_str.substr(0, 32), nullptr, 2);
+    input_str = input_str.substr(32);
 
-      datamap[DATA_START + i] = data;
+    datamap[DATA_START + i] = data;
 
   }
   // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
@@ -152,77 +137,111 @@ int main(int argc, char* argv[]) {
   // write result to stdout
 
   while (pc < TEXT_START + text_section_size) {
-      inst = textmap[pc];
-      op = inst[0];
+    inst = textmap[pc];
+    op = inst[0];
 
-      switch(op)  {
-          // Rtype
-          case 0:
-              rs = inst[1], rt = inst[2], rd = inst[3], sft = inst[4], fn = inst[5];
+    switch(op)  {
+      // Rtype
+      case 0:
+        rs = inst[1], rt = inst[2], rd = inst[3], sft = inst[4], fn = inst[5];
 
-              switch (fn) {
+        switch (fn) {
+          // addu
+          case 0x21:
+            break;
 
+          // and
+          case 0x24:
+            break;
 
-              }
-              break;
+          // nor
+          case 0x27:
+            break;
 
-          // addiu
-          case 9:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
+          // or
+          case 0x25:
+            break;
 
-          // andi
-          case 0xc:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // lui
-          case 0xf:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // ori
-          case 0xd:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // sltiu
-          case 0xb:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // beq
-          case 4:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // bne
-          case 5:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // lw
-          case 0x23:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
-
-          // sw
+          // sltu
           case 0x2b:
-              rs = inst[1], rt = inst[2], imm = inst[3];
-              break;
+            break;
 
-          // j
+          // sll
+          case 0:
+            break;
+
+          // srl
           case 2:
-              target = inst[1];
-              break;
+            break;
 
-          // jal
-          case 3:
-              target = inst[1];
-              break;
-      }
+          // subu
+          case 0x23:
+            break;
 
-      pc += 4;
+          // jr
+          case 8:
+            break;
+
+        }
+        break;
+
+      // addiu
+      case 9:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // andi
+      case 0xc:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // lui
+      case 0xf:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // ori
+      case 0xd:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // sltiu
+      case 0xb:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // beq
+      case 4:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // bne
+      case 5:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // lw
+      case 0x23:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // sw
+      case 0x2b:
+        rs = inst[1], rt = inst[2], imm = inst[3];
+        break;
+
+      // j
+      case 2:
+        target = inst[1];
+        break;
+
+      // jal
+      case 3:
+        target = inst[1];
+        break;
+    }
+
+    pc += 4;
   }
 
   // completion
