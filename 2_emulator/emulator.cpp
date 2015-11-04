@@ -5,14 +5,16 @@
 #include <cstring>
 #include <unordered_map>
 #include <sstream>
+#include <vector>
 
-#define MAX_SIZE 10000
+#define MAX_SIZE 100000
 #define TEXT_START 0x400000
 #define DATA_START 0x10000000
 
 // namespace declare
 using namespace std;
 
+// class definition
 // opcode map
 unordered_map <string, int> opmap = {{"addu", 0}, {"and", 0}, {"nor", 0}, {"or", 0},
     {"sltu", 0}, {"sll", 0}, {"srl", 0}, {"subu", 0}, {"jr", 0}, {"addiu", 9},
@@ -31,115 +33,19 @@ unordered_map <int, int> typemap;
 int regmap[32];
 
 // instruction/data address -> value
-unordered_map <int, Instruction> textmap;
+unordered_map <int, vector<int>> textmap;
 unordered_map <int, int> datamap;
 
 int pc = TEXT_START;
 
-// class definition
-class Instruction {
-    public:
-        virtual void SetInfo() = 0;
-        virtual string format() = 0;
-        virtual int* getInfo() = 0;
-};
+vector<int> parse_inst(string raw_str) {
+    int op = stoi(raw_str.substr(0, 6), nullptr, 2);
+    int rs, rt, rd, sft, fn, imm, target;
+    vector<int> result;
 
-class Rtype : public Instruction {
-    private:
-        bitset<6> opcode;
-        bitset<5> rs;
-        bitset<5> rt;
-        bitset<5> rd;
-        bitset<5> sft;
-        bitset<6> fn;
-    public:
-        void SetInfo(int _opcode, int _rs, int _rt, int _rd, int _sft, int _fn) {
-            opcode = bitset<6>(_opcode);
-            rs = bitset<5>(_rs);
-            rt = bitset<5>(_rt);
-            rd = bitset<5>(_rd);
-            sft = bitset<5>(_sft);
-            fn = bitset<6>(_fn);
-        }
+    result.push_back(op);
 
-        int* getInfo() {
-            int result[6];
-
-            result[0] = static_cast<int>(opcode.to_ulong());
-            result[1] = static_cast<int>(rs.to_ulong());
-            result[2] = static_cast<int>(rt.to_ulong());
-            result[3] = static_cast<int>(rd.to_ulong());
-            result[4] = static_cast<int>(sft.to_ulong());
-            result[5] = static_cast<int>(fn.to_ulong());
-
-            return result;
-        }
-
-        string format() {
-            return opcode.to_string() + rs.to_string() + rt.to_string() + rd.to_string() + sft.to_string() + fn.to_string();
-        }
-    };
-
-class Itype : public Instruction {
-    private:
-        bitset<6> opcode;
-        bitset<5> rs;
-        bitset<5> rt;
-        bitset<16> imm;
-    public:
-        void SetInfo(int _opcode, int _rs, int _rt, int _imm)  {
-            opcode = bitset<6>(_opcode);
-            rs = bitset<5>(_rs);
-            rt = bitset<5>(_rt);
-            imm = bitset<16>(_imm);
-        }
-
-        int* getInfo() {
-            int result[4];
-
-            result[0] = static_cast<int>(opcode.to_ulong());
-            result[1] = static_cast<int>(rs.to_ulong());
-            result[2] = static_cast<int>(rt.to_ulong());
-            result[3] = static_cast<int>(imm.to_ulong());
-
-            return result;
-        }
-
-        string format() {
-            return opcode.to_string() + rs.to_string() + rt.to_string() + imm.to_string();
-        }
-    };
-
-class Jtype : public Instruction {
-    private:
-        bitset<6> opcode;
-        bitset<26> target;
-    public:
-        void SetInfo(int _opcode, int _target) {
-            opcode = bitset<6>(_opcode);
-            target = bitset<26>(_target);
-        }
-
-        int* getInfo() {
-            int result[2];
-
-            result[0] = static_cast<int>(opcode.to_ulong());
-            result[1] = static_cast<int>(target.to_ulong());
-
-            return result;
-        }
-
-        string format() {
-            return opcode.to_string() + target.to_string();
-        }
-    };
-
-Instruction parse_inst(string raw_str) {
-    int op = stoi(raw_str.substr(6), nullptr, 2);
-    int rs, rt, rd, sft, fn, imm;
-    Instruction inst;
-
-    switch (opcode):
+    switch (op) {
         case 0:
             rs = stoi(raw_str.substr(6, 5), nullptr, 2);
             rt = stoi(raw_str.substr(11, 5), nullptr, 2);
@@ -147,8 +53,12 @@ Instruction parse_inst(string raw_str) {
             sft = stoi(raw_str.substr(21, 5), nullptr, 2);
             fn = stoi(raw_str.substr(26, 6), nullptr, 2);
 
-            inst = (Rtype) inst;
-            inst.setInfo(op, rs, rt, rd, sft, fn);
+            result.push_back(rs);
+            result.push_back(rt);
+            result.push_back(rd);
+            result.push_back(sft);
+            result.push_back(fn);
+            break;
 
         case 9:
         case 0xc:
@@ -163,60 +73,67 @@ Instruction parse_inst(string raw_str) {
             rt = stoi(raw_str.substr(11, 5), nullptr, 2);
             imm = stoi(raw_str.substr(16, 16), nullptr, 2);
 
-            inst = (Itype) inst;
-            inst.setInfo(op, rs, rt, imm);
+            result.push_back(rs);
+            result.push_back(rt);
+            result.push_back(imm);
+            break;
 
         case 2:
         case 3:
-            int target = stoi(raw_str.substr(6, 26), nullptr, 2);
+            target = stoi(raw_str.substr(6, 26), nullptr, 2);
 
-            inst = (Jtype) inst;
-            inst.setInfo(op, target);
+            result.push_back(target);
+    }
 
-    return inst;
+    return result;
 }
 
 int main(int argc, char* argv[]) {
     string filename = (string) argv[1];
     ifstream inFile(filename);
 
-    char input_string[MAX_SIZE];
+    char buf[MAX_SIZE];
+    string input_str;
 
     int data_section_size, text_section_size;
     int target_address;
 
-    Instruction inst;
+    vector<int> inst;
     int data;
+    int i;
+
+    inFile.getline(buf, MAX_SIZE);
+    input_str = (string) buf;
+    cout << input_str << " " << input_str.size() << endl;
 
     // Initialize Register
-    for (int i = 0; i < 32 ; i++) {
+    for (i = 0; i < 32 ; i++) {
       regmap[i] = 0;
     }
 
     // Get each section's size info
-    inFile.getline(input_string, MAX_SIZE);
-    text_section_size = atoi(input_string);
+    text_section_size = stoi(input_str.substr(0, 32), nullptr, 2);
+    input_str = input_str.substr(32);
 
-    inFile.getline(input_string, MAX_SIZE);
-    data_section_size = atoi(input_string);
+    data_section_size = stoi(input_str.substr(0, 32), nullptr, 2);
+    input_str = input_str.substr(32);
 
     // text section load
     for (i = 0; i < text_section_size ; i+=4) {
-        inFile.getline(input_string, MAX_SIZE);
-        inst = parse_inst((string) input_string);
+        inst = parse_inst(input_str.substr(0, 32));
+        input_str = input_str.substr(32);
 
         textmap[TEXT_START + i] = inst;
     }
 
     // data section load
     for (i = 0; i < data_section_size ; i+=4) {
-        inFile.getline(input_string, MAX_SIZE);
-        data = a
+        data = stoi(input_str.substr(0, 32), nullptr, 2);
+        input_str = input_str.substr(32);
 
         datamap[DATA_START + i] = data;
 
     }
-
     // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
 
     // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
