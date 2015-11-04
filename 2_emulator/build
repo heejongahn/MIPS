@@ -1,1 +1,1 @@
-g++ emulator.cpp -o emulator -std=c++11
+g++ emulator.cpp -o cs311em -std=c++11
