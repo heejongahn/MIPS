@@ -75,6 +75,8 @@ vector<int> parse_inst(string raw_str) {
 }
 
 void print_result() {
+  int i;
+
   cout << "Current register values :" << endl;
   cout << "-------------------------------------" << endl;
   cout << "PC: 0x" << setfill('0') << setw(8) << setbase(16) << pc << endl;
@@ -84,6 +86,16 @@ void print_result() {
   cout << setw(8) << setbase(16) << reg[i] << endl;
   }
 }
+
+int sign_extend(int original) {
+    int value = (0x0000FFFF & original);
+    int mask = 0x00008000;
+    int sign = (mask & original) >> 15;
+    if (sign == 1)
+        value += 0xFFFF0000;
+    return value;
+}
+
 
 int main(int argc, char* argv[]) {
   string filename = (string) argv[1];
@@ -99,6 +111,7 @@ int main(int argc, char* argv[]) {
 
   int i;
   int op, rs, rt, rd, sft, fn, imm, target;
+  int count = 0;
 
   inFile.getline(buf, MAX_SIZE);
   input_str = (string) buf;
@@ -137,6 +150,9 @@ int main(int argc, char* argv[]) {
   // write result to stdout
 
   while (pc < TEXT_START + text_section_size) {
+    if (count == 100) {
+      break;
+    }
     inst = textmap[pc];
     pc += 4;
     op = inst[0];
@@ -149,38 +165,52 @@ int main(int argc, char* argv[]) {
         switch (fn) {
           // addu
           case 0x21:
+            reg[rd] = reg[rs] + reg[rt];
             break;
 
           // and
           case 0x24:
+            reg[rd] = (reg[rs] & reg[rt]);
             break;
 
           // nor
           case 0x27:
+            reg[rd] = ~(reg[rs] | reg[rt]);
             break;
 
           // or
           case 0x25:
+            reg[rd] = (reg[rs] | reg[rt]);
             break;
 
           // sltu
           case 0x2b:
+            if (static_cast<unsigned int>(reg[rs]) < static_cast<unsigned int>(reg[rt])) {
+              reg[rd] = 1;
+            }
+            else  {
+              reg[rd] = 0;
+            }
             break;
 
           // sll
           case 0:
+            reg[rd] = (reg[rt] << sft);
             break;
 
           // srl
           case 2:
+            reg[rd] = (reg[rt] >> sft);
             break;
 
           // subu
           case 0x23:
+            reg[rd] = reg[rs] - reg[rt];
             break;
 
           // jr
           case 8:
+            pc = reg[rs];
             break;
 
         }
@@ -188,59 +218,81 @@ int main(int argc, char* argv[]) {
 
       // addiu
       case 9:
-        rs = inst[1], rt = inst[2], imm = inst[3];
+        rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
+        reg[rt] = reg[rs] + imm;
         break;
 
       // andi
       case 0xc:
         rs = inst[1], rt = inst[2], imm = inst[3];
+        reg[rt] = (reg[rs] & imm);
         break;
 
       // lui
       case 0xf:
         rs = inst[1], rt = inst[2], imm = inst[3];
+        reg[rt] = (imm << 16);
         break;
 
       // ori
       case 0xd:
         rs = inst[1], rt = inst[2], imm = inst[3];
+        reg[rt] = (reg[rs] | imm);
         break;
 
       // sltiu
       case 0xb:
-        rs = inst[1], rt = inst[2], imm = inst[3];
+        rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
+        if (static_cast<unsigned int>(reg[rs]) < static_cast<unsigned int>(imm)) {
+          reg[rt] = 1;
+        }
+        else  {
+          reg[rt] = 0;
+        }
         break;
 
       // beq
       case 4:
-        rs = inst[1], rt = inst[2], imm = inst[3];
+        rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
+        if (reg[rs] == reg[rt])  {
+          pc += (imm << 2);
+        }
         break;
 
       // bne
       case 5:
-        rs = inst[1], rt = inst[2], imm = inst[3];
+        rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
+        if (reg[rs] != reg[rt])  {
+          pc += (imm << 2);
+        }
         break;
 
       // lw
       case 0x23:
-        rs = inst[1], rt = inst[2], imm = inst[3];
+        rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
+        reg[rt] = datamap[reg[rs] + imm];
         break;
 
       // sw
       case 0x2b:
-        rs = inst[1], rt = inst[2], imm = inst[3];
+        rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
+        datamap[reg[rs] + imm] = reg[rt];
         break;
 
       // j
       case 2:
         target = inst[1];
+        pc = ((pc & 0xf0000000) | (target << 2));
         break;
 
       // jal
       case 3:
         target = inst[1];
+        reg[31] = pc + 4;
+        pc = ((pc & 0xf0000000) | (target << 2));
         break;
     }
+    count++;
   }
 
   // completion
