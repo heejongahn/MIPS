@@ -148,6 +148,8 @@ int main(int argc, char* argv[]) {
     num_instr = atoi(getCmdOption(argv, argv+argc, "-n"));
   }
   bool print_every = cmdOptionExists(argv, argv+argc, "-d");
+  bool mem_violation = false;
+  int violation_value;
 
   /*
   char* mdump_region;
@@ -204,6 +206,7 @@ int main(int argc, char* argv[]) {
     if (num_instr <= count) {
       break;
     }
+
     inst = textmap[pc];
     pc += 4;
     op = inst[0];
@@ -322,12 +325,20 @@ int main(int argc, char* argv[]) {
       case 0x23:
         rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
         reg[rt] = datamap[reg[rs] + imm];
+        if (imm < 0x10000000) {
+          mem_violation = true;
+          violation_value = imm;
+        }
         break;
 
       // sw
       case 0x2b:
         rs = inst[1], rt = inst[2], imm = sign_extend(inst[3]);
         datamap[reg[rs] + imm] = reg[rt];
+        if (imm < 0x10000000) {
+          mem_violation = true;
+          violation_value = imm;
+        }
         break;
 
       // j
@@ -344,7 +355,11 @@ int main(int argc, char* argv[]) {
         break;
     }
     if (print_every)  {
-      if (pc == TEXT_START + text_section_size) {
+      if (mem_violation)  {
+        cout << "Memory Write Error: Exceed memory boundary 0x" << setbase(16) << violation_value << endl;
+        break;
+      }
+      else if (pc == TEXT_START + text_section_size) {
         cout << "Run bit unset pc: " << setbase(16) << pc << endl;
         print_result();
         cout << "Simulator halted" << endl;
@@ -357,17 +372,22 @@ int main(int argc, char* argv[]) {
     count++;
   }
 
-  if (!print_every && (pc == TEXT_START + text_section_size)) {
-    cout << "Run bit unset pc: " << setbase(16) << pc << endl;
-    cout << "Simulator halted" << endl;
-    cout << "Executed cycle: " << setbase(10) << count << endl;
-    cout << endl;
-  }
-
   if (!print_every) {
-    print_result();
-  }
+    if (mem_violation)  {
+      cout << "Memory Write Error: Exceed memory boundary 0x" << setbase(16) << violation_value << endl;
+    }
 
+    else  {
+      if (pc == TEXT_START + text_section_size) {
+        cout << "Run bit unset pc: " << setbase(16) << pc << endl;
+        cout << "Simulator halted" << endl;
+        cout << "Executed cycle: " << setbase(10) << count << endl;
+        cout << endl;
+      }
+
+      print_result();
+    }
+  }
 
   return 0;
 }
