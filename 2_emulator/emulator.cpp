@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <iomanip>
+#include <algorithm>
 
 #define MAX_SIZE 100000
 #define TEXT_START 0x400000
@@ -23,6 +24,33 @@ unordered_map <int, vector<int>> textmap;
 unordered_map <int, int> datamap;
 
 int pc = TEXT_START;
+
+char* getCmdOption(char ** begin, char ** end, const std::string & option)
+{
+    char ** itr = std::find(begin, end, option);
+    if (itr != end && ++itr != end)
+    {
+        return *itr;
+    }
+    return 0;
+}
+
+bool cmdOptionExists(char** begin, char** end, const std::string& option)
+{
+    return std::find(begin, end, option) != end;
+}
+
+int htoi(char* h) {
+    string h_str = (string) h;
+
+    stringstream ss;
+    ss << hex << h;
+
+    int n;
+    ss >> n;
+
+    return n;
+}
 
 vector<int> parse_inst(string raw_str) {
   int op = stoi(raw_str.substr(0, 6), nullptr, 2);
@@ -82,9 +110,10 @@ void print_result() {
   cout << "PC: 0x" << setfill('0') << setw(8) << setbase(16) << pc << endl;
   cout << "Registers:" << endl;
   for (i = 0; i < 32; i++)  {
-  cout << setbase(10) << "R" << i << ": 0x";
-  cout << setw(8) << setbase(16) << reg[i] << endl;
+    cout << setbase(10) << "R" << i << ": 0x";
+    cout << setw(8) << setbase(16) << reg[i] << endl;
   }
+  cout << endl;
 }
 
 int sign_extend(int original) {
@@ -98,7 +127,7 @@ int sign_extend(int original) {
 
 
 int main(int argc, char* argv[]) {
-  string filename = (string) argv[1];
+  string filename = (string) argv[argc-1];
   ifstream inFile(filename);
 
   char buf[MAX_SIZE];
@@ -113,12 +142,31 @@ int main(int argc, char* argv[]) {
   int op, rs, rt, rd, sft, fn, imm, target;
   int count = 0;
 
+  // Command-line option
+  int num_instr = 100;
+  if (cmdOptionExists(argv, argv+argc, "-n")) {
+    num_instr = atoi(getCmdOption(argv, argv+argc, "-n"));
+  }
+  bool print_every = cmdOptionExists(argv, argv+argc, "-d");
+
+  /*
+  char* mdump_region;
+  if (cmdOptionExists(argv, argv+argc, "-m")) {
+    mdump_region = getCmdOption(argv, argv+argc, "-m");
+  }
+
+  int mem_start = htoi(strtok(mdump_region, ":"));
+  int mem_end = htoi(strtok(NULL, " "));
+  */
+
+  // cout << "-m: " << mdump_region << endl;
+
   inFile.getline(buf, MAX_SIZE);
   input_str = (string) buf;
 
   // Initialize Register
   for (i = 0; i < 32 ; i++) {
-  reg[i] = 0;
+    reg[i] = 0;
   }
 
   // Get each section's size info
@@ -149,8 +197,11 @@ int main(int argc, char* argv[]) {
   // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
   // write result to stdout
 
+  cout << "Simulating for " << num_instr << " cycles..." << endl;
+  cout << endl;
+
   while (pc < TEXT_START + text_section_size) {
-    if (count == 100) {
+    if (num_instr <= count) {
       break;
     }
     inst = textmap[pc];
@@ -292,11 +343,31 @@ int main(int argc, char* argv[]) {
         pc = ((pc & 0xf0000000) | (target << 2));
         break;
     }
+    if (print_every)  {
+      if (pc == TEXT_START + text_section_size) {
+        cout << "Run bit unset pc: " << setbase(16) << pc << endl;
+        print_result();
+        cout << "Simulator halted" << endl;
+        cout << endl;
+      }
+      else  {
+        print_result();
+      }
+    }
     count++;
   }
 
-  // completion
-  print_result();
+  if (!print_every && (pc == TEXT_START + text_section_size)) {
+    cout << "Run bit unset pc: " << setbase(16) << pc << endl;
+    cout << "Simulator halted" << endl;
+    cout << "Executed cycle: " << setbase(10) << count << endl;
+    cout << endl;
+  }
+
+  if (!print_every) {
+    print_result();
+  }
+
 
   return 0;
 }
