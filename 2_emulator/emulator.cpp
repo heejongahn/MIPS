@@ -27,8 +27,8 @@ unordered_map <string, int> fnmap = {{"addu", 0x21}, {"and", 0x24}, {"nor", 0x27
 // opcoe -> instruction type (0: Rtype, 1: Itype, 2: Jtype)
 unordered_map <int, int> typemap;
 
-// reg no -> value
-unordered_map <int, int> regmap;
+// reg value array
+int regmap[32];
 
 // instruction/data address -> value
 unordered_map <int, Instruction> textmap;
@@ -41,6 +41,7 @@ class Instruction {
     public:
         virtual void SetInfo() = 0;
         virtual string format() = 0;
+        virtual int* getInfo() = 0;
 };
 
 class Rtype : public Instruction {
@@ -59,6 +60,19 @@ class Rtype : public Instruction {
             rd = bitset<5>(_rd);
             sft = bitset<5>(_sft);
             fn = bitset<6>(_fn);
+        }
+
+        int* getInfo() {
+            int result[6];
+
+            result[0] = static_cast<int>(opcode.to_ulong());
+            result[1] = static_cast<int>(rs.to_ulong());
+            result[2] = static_cast<int>(rt.to_ulong());
+            result[3] = static_cast<int>(rd.to_ulong());
+            result[4] = static_cast<int>(sft.to_ulong());
+            result[5] = static_cast<int>(fn.to_ulong());
+
+            return result;
         }
 
         string format() {
@@ -80,6 +94,17 @@ class Itype : public Instruction {
             imm = bitset<16>(_imm);
         }
 
+        int* getInfo() {
+            int result[4];
+
+            result[0] = static_cast<int>(opcode.to_ulong());
+            result[1] = static_cast<int>(rs.to_ulong());
+            result[2] = static_cast<int>(rt.to_ulong());
+            result[3] = static_cast<int>(imm.to_ulong());
+
+            return result;
+        }
+
         string format() {
             return opcode.to_string() + rs.to_string() + rt.to_string() + imm.to_string();
         }
@@ -95,6 +120,15 @@ class Jtype : public Instruction {
             target = bitset<26>(_target);
         }
 
+        int* getInfo() {
+            int result[2];
+
+            result[0] = static_cast<int>(opcode.to_ulong());
+            result[1] = static_cast<int>(target.to_ulong());
+
+            return result;
+        }
+
         string format() {
             return opcode.to_string() + target.to_string();
         }
@@ -102,29 +136,42 @@ class Jtype : public Instruction {
 
 Instruction parse_inst(string raw_str) {
     int op = stoi(raw_str.substr(6), nullptr, 2);
+    int rs, rt, rd, sft, fn, imm;
     Instruction inst;
 
     switch (opcode):
-        case Rtype:
-            int rs = stoi(raw_str.substr(6, 5), nullptr, 2);
-            int rt = stoi(raw_str.substr(11, 5), nullptr, 2);
-            int rd = stoi(raw_str.substr(16, 5), nullptr, 2);
-            int sft = stoi(raw_str.substr(21, 5), nullptr, 2);
-            int fn = stoi(raw_str.substr(26, 6), nullptr, 2);
+        case 0:
+            rs = stoi(raw_str.substr(6, 5), nullptr, 2);
+            rt = stoi(raw_str.substr(11, 5), nullptr, 2);
+            rd = stoi(raw_str.substr(16, 5), nullptr, 2);
+            sft = stoi(raw_str.substr(21, 5), nullptr, 2);
+            fn = stoi(raw_str.substr(26, 6), nullptr, 2);
 
-            inst = Rtype(op, rs, rt, rd, sft, fn);
+            inst = (Rtype) inst;
+            inst.setInfo(op, rs, rt, rd, sft, fn);
 
-        case Itype:
-            int rs = stoi(raw_str.substr(6, 5), nullptr, 2);
-            int rt = stoi(raw_str.substr(11, 5), nullptr, 2);
-            int imm = stoi(raw_str.substr(16, 16), nullptr, 2);
+        case 9:
+        case 0xc:
+        case 0xf:
+        case 0xd:
+        case 0xb:
+        case 4:
+        case 5:
+        case 0x23:
+        case 0x2b:
+            rs = stoi(raw_str.substr(6, 5), nullptr, 2);
+            rt = stoi(raw_str.substr(11, 5), nullptr, 2);
+            imm = stoi(raw_str.substr(16, 16), nullptr, 2);
 
-            inst = Itype(op, rs, rt, imm);
+            inst = (Itype) inst;
+            inst.setInfo(op, rs, rt, imm);
 
-        case Jtype:
+        case 2:
+        case 3:
             int target = stoi(raw_str.substr(6, 26), nullptr, 2);
 
-            inst = Jtype(op, target);
+            inst = (Jtype) inst;
+            inst.setInfo(op, target);
 
     return inst;
 }
@@ -171,8 +218,6 @@ int main(int argc, char* argv[]) {
     }
 
     // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
-
-    // run program
 
     // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
     // write result to stdout
