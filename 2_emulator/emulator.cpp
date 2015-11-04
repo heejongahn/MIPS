@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <sstream>
 #include <vector>
+#include <iomanip>
 
 #define MAX_SIZE 100000
 #define TEXT_START 0x400000
@@ -30,7 +31,7 @@ unordered_map <string, int> fnmap = {{"addu", 0x21}, {"and", 0x24}, {"nor", 0x27
 unordered_map <int, int> typemap;
 
 // reg value array
-int regmap[32];
+int reg[32];
 
 // instruction/data address -> value
 unordered_map <int, vector<int>> textmap;
@@ -88,6 +89,17 @@ vector<int> parse_inst(string raw_str) {
     return result;
 }
 
+void print_result() {
+    cout << "Current register values :" << endl;
+    cout << "-------------------------------------" << endl;
+    cout << "PC: 0x" << setfill('0') << setw(8) << setbase(16) << pc << endl;
+    cout << "Registers:" << endl;
+    for (i = 0; i < 32; i++)  {
+      cout << setbase(10) << "R" << i << ": 0x";
+      cout << setw(8) << setbase(16) << reg[i] << endl;
+    }
+}
+
 int main(int argc, char* argv[]) {
     string filename = (string) argv[1];
     ifstream inFile(filename);
@@ -96,19 +108,19 @@ int main(int argc, char* argv[]) {
     string input_str;
 
     int data_section_size, text_section_size;
-    int target_address;
 
     vector<int> inst;
     int data;
+
     int i;
+    int op, rs, rt, rd, sft, fn, imm, target;
 
     inFile.getline(buf, MAX_SIZE);
     input_str = (string) buf;
-    cout << input_str << " " << input_str.size() << endl;
 
     // Initialize Register
     for (i = 0; i < 32 ; i++) {
-      regmap[i] = 0;
+      reg[i] = 0;
     }
 
     // Get each section's size info
@@ -139,7 +151,83 @@ int main(int argc, char* argv[]) {
     // ----- *-_-* ----- @_@ ----- ^3^ ----- *_* ----- >3< ----- +_+ ----- //
     // write result to stdout
 
+    while (pc < TEXT_START + text_section_size) {
+        inst = textmap[pc];
+        op = inst[0];
 
+        switch(op)  {
+            // Rtype
+            case 0:
+                rs = inst[1], rt = inst[2], rd = inst[3], sft = inst[4],
+                   fn = inst[5];
+
+                switch (fn) {
+
+
+                }
+                break;
+
+            // addiu
+            case 9:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // andi
+            case 0xc:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // lui
+            case 0xf:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // ori
+            case 0xd:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // sltiu
+            case 0xb:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // beq
+            case 4:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // bne
+            case 5:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // lw
+            case 0x23:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // sw
+            case 0x2b:
+                rs = inst[1], rt = inst[2], imm = inst[3];
+                break;
+
+            // j
+            case 2:
+                target = inst[1];
+                break;
+
+            // jal
+            case 3:
+                target = inst[1];
+                break;
+        }
+
+        pc += 4;
+    }
+
+    // completion
+    print_result();
 
     return 0;
 }
