@@ -7,6 +7,21 @@
 
 #define BYTES_PER_WORD 4
 
+int capacity;
+int way;
+int blocksize;
+block** cache;
+uint32_t PC;
+int set;
+int words;
+int total_reads = 0;
+int total_writes = 0;
+int write_backs = 0;
+int reads_hits = 0;
+int write_hits = 0;
+int reads_misses = 0;
+int write_misses = 0;
+
 /***************************************************************/
 /*                                                             */
 /* Procedure : cdump                                           */
@@ -109,13 +124,7 @@ void xdump(int set, int way, block** cache)
 
 
 int main(int argc, char *argv[]) {
-    block** cache;
     int i, j, k;
-    int capacity = 256;
-    int way = 4;
-    int blocksize = 8;
-    int set = capacity/way/blocksize;
-    int words = blocksize / BYTES_PER_WORD;
 
     bool print_cache = false;
 
@@ -124,17 +133,21 @@ int main(int argc, char *argv[]) {
     uint32_t addr;
 
     for(i = 1; i < argc; i++) {
-        if(!strcmp(argv[i], "-x")) {
-            print_cache = true;
-        }
-        else if(!strcmp(argv[i], "-c")) {
-            i++;
-            sscanf(argv[i], "%d:%d:%d", &capacity, &way, &blocksize);
-        }
-        else {
-            inputFile = fopen(argv[i], "r");
+        for(j = 0; j < strlen(argv[i]); j++) {
+              if(!strcmp(argv[i], "-x")) {
+                  print_cache = true;
+              }
+              else if(!strcmp(argv[i], "-c")) {
+                  i++;
+                  sscanf(argv[i], "%d:%d:%d", &capacity, &way, &blocksize);
+              }
+              else {
+                  inputFile = fopen(argv[i], "r");
+              }
         }
     }
+    set = capacity/way/blocksize;
+    words = blocksize / BYTES_PER_WORD;
 
     // Cache Initialization
     cache = (block**) malloc (sizeof(block*) * set);
