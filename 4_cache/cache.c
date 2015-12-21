@@ -119,4 +119,5 @@ void access(char x, uint32_t addr) {
     else {
         write(addr);
     }
+    PC++;
 }
