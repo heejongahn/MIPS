@@ -1,31 +1,72 @@
-KAIST CS311 2015 Fall                       
+KAIST CS311 2015 Fall
+Project 3 by Team 42 (20130380 Heejong Ahn)
 
-Made by TAs of CS311
+# CPU_State
+- PC : 프로그램 카운터
+- REGS : 레지스터 파일
+- PIPE : 각 파이프라인 스테이지의 PC
 
-Project Lab2 - MIPS Emulator
+- if_id : IF_ID 파이프라인 레지스터
+- id_ex : ID_EX 파이프라인 레지스터
+- ex_mem : EX_MEM 파이프라인 레지스터
+- mem_wb : MEM_WB 파이프라인 레지스터
 
-[File Description]
-cs311.c ----------- This contains main function.
-                    It uploads instruction and data into memory regions, and parse and execute them by using functions which will be implemented by you.
+- FLUSH : Conditional Hazard로 인해 flush 해야 하는 파이프라인 스테이지의 수
+- LoadUse : 현재 EX stage와 MEM stage 간의 load-use 디펜던시 플래그
 
-util.c & util.h --- This contains all the data structures.
-                    This also contains several useful functions. (Read and write data into the memory region, initialize the memory region and etc...)
+# IF_ID
+- INSTR : 이번 사이클에 fetch 해온 인스트럭션
+- NPC : Next Program Counter
 
-parse.c & parse.h - This contains variables and functions to parse the instruction and data.
-                    You should implement them.
+# ID_IF
+- NPC : Next Program Counter
 
-run.c & run.h ----- This contains variables and functions to execute instructions.
-                    You should implement them.
+- REG1 : RS 레지스터의 값
+- REG2 : RT 레지스터의 값
 
-sample_input ------ This directory contains serveral sample input files.
-                    Please use these files for your program testing.
+- RS, RD, RT : 각각 RS, RD, RT 레지스터 이름
+- IMM, SHAMT : Immediate, Shift Amount 필드
+- DEST : destination register name
 
-[Compile & Execution]
-Just type "make" to compile your code.
-You can execute your program using this command: ./cs311em [-m addr1:addr2] [-d] [-n num_instr] inputBinary
-	* -m : Dump the memory content form addr1 to addr2
-	* -d : Print the register file content for each instruction execution. Print memory content too if -m option is enabled.
-	* -n : Number of instructions to execute. Default value is 100.
+- ALUOp : ALU에서 해야할 작업을 나타내는 코드
+  // 1: add (ADDIU, ADDU, LW, SW)
+  // 2: sub (SUBU, BEQ, BNE)
+  // 3: AND (AND, ANDI)
+  // 4: OR (OR, ORI, NOR)
+  // 5: Shift Left (SLL)
+  // 6: Shift Right (SRL)
+  // 7: Set Less Than (SLTIU, SLTU)
+  // 8: Shift Left 16 (LUI)
+  // 9: JAL (JAL)
 
-In each file, we write some comments to help you to understand the code, so please read them carefully. :D
-If you have any question, please email us. (cs311_ta@calab.kaist.ac.kr)
+- ALUSrc : ALU의 두 번째 Operand가 immediate field이면 1, 레지스터이면 0
+- ALUNeg : NOR / BNE 일 경우 1, 그 외의 경우 0
+
+- Branch : 브랜치 오퍼레이션일시 1, 그 외의 경우 0
+- MemRead : load 일시 1, 그 외의 경우 0
+- MemWrite : store 일시 1, 그 외의 경우 0
+
+- RegWrite : Register 값을 변경하는 오퍼레이션일시 1, 그 외의 경우 0
+- MemtoReg : Register 값을 MEM_OUT으로 업데이트 할 시 1, 그 외의 경우 0
+
+# EX_MEM
+- MemValue: (만약 존재할 시) 메모리에 써야 할 값
+- DEST : destination register name
+- ALU_OUT: ALU 연산 결과값
+- BR_TARGET: (branch일시) branch target address
+
+- Branch : 브랜치 오퍼레이션일시 1, 그 외의 경우 0
+- MemRead : load 일시 1, 그 외의 경우 0
+- MemWrite : store 일시 1, 그 외의 경우 0
+
+- RegWrite : Register 값을 변경하는 오퍼레이션일시 1, 그 외의 경우 0
+- MemtoReg : Register 값을 MEM_OUT으로 업데이트 할 시 1, 그 외의 경우 0
+
+# MEM_WB
+
+- DEST : destination register name
+- ALU_OUT: ALU 연산 결과값
+- MEM_OUT: 메모리에서 load 해온 값
+
+- RegWrite : Register 값을 변경하는 오퍼레이션일시 1, 그 외의 경우 0
+- MemtoReg : Register 값을 MEM_OUT으로 업데이트 할 시 1, 그 외의 경우 0
